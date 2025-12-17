@@ -1,12 +1,44 @@
-const express = require('express');
+import express from "express";
+import { protect } from "../middleware/auth.js";
+import { permit } from "../middleware/roles.js";
+
+import {
+  submitTest,
+  getSubmissionsForTest,
+  getMyResults,
+  exportSubmissionsExcel,
+} from "../controllers/submissionController.js";
+
 const router = express.Router();
-const auth = require('../middleware/auth');
-const { permit } = require('../middleware/roles');
-const { startOrAutosave, submitTest, getSubmissionsForStudent, getSubmissionsForTest } = require('../controllers/submissionController');
 
-router.post('/autosave', auth, permit('student'), startOrAutosave);
-router.post('/submit', auth, permit('student'), submitTest);
-router.get('/me', auth, permit('student'), getSubmissionsForStudent);
-router.get('/test/:testId', auth, permit('teacher','admin'), getSubmissionsForTest);
+// ===============================
+// Student submits test
+// ===============================
+router.post("/", protect, permit("student"), submitTest);
 
-module.exports = router;
+// ===============================
+// Student results history
+// ===============================
+router.get("/my", protect, permit("student"), getMyResults);
+
+// ===============================
+// Teacher views submissions for a test
+// ===============================
+router.get(
+  "/test/:testId",
+  protect,
+  permit("teacher"),
+  getSubmissionsForTest
+);
+
+// ===============================
+// Teacher exports submissions as Excel
+// ===============================
+router.get(
+  "/export/:testId",
+  protect,
+  permit("teacher"),
+  exportSubmissionsExcel
+);
+
+export default router;

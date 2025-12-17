@@ -3,7 +3,6 @@ import { Outlet, Link } from "react-router-dom";
 export default function StudentLayout() {
   return (
     <div className="min-h-screen flex">
-      {/* Sidebar */}
       <aside className="w-64 bg-green-900 text-white p-4">
         <h2 className="text-xl font-bold mb-6">Student</h2>
 
@@ -15,7 +14,7 @@ export default function StudentLayout() {
         </nav>
       </aside>
 
-      {/* Content */}
+      {/* 🔥 REQUIRED */}
       <main className="flex-1 bg-gray-100 p-6">
         <Outlet />
       </main>

@@ -1,22 +1,34 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
-const AnswerSchema = new mongoose.Schema({
-  question: { type: mongoose.Schema.Types.ObjectId, ref: 'Question' },
-  selected: [{ type: Number }], // indexes chosen
-  isCorrect: Boolean,
-  marksObtained: Number
-});
+const submissionSchema = new mongoose.Schema(
+  {
+    student: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    test: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Test",
+      required: true,
+    },
+    answers: [
+      {
+        question: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Question",
+        },
+        selected: Number,
+        isCorrect: Boolean,
+      },
+    ],
+    score: Number,
+    submittedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { timestamps: true }
+);
 
-const SubmissionSchema = new mongoose.Schema({
-  test: { type: mongoose.Schema.Types.ObjectId, ref: 'Test', required: true },
-  student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  answers: [AnswerSchema],
-  status: { type: String, enum: ['in-progress','submitted','graded'], default: 'in-progress' },
-  startedAt: { type: Date, default: Date.now },
-  submittedAt: Date,
-  totalMarks: { type: Number, default: 0 },
-  attemptNumber: { type: Number, default: 1 }, // for retakes
-  autosave: { type: Boolean, default: false }
-});
-
-module.exports = mongoose.model('Submission', SubmissionSchema);
+export default mongoose.model("Submission", submissionSchema);

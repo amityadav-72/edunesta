@@ -1,22 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import API from "../../services/api";
+import api from "../../utils/axios"; // ✅ FIXED IMPORT
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
+  // Redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (token && user) {
+      navigate(`/${user.role}`);
+    }
+  }, [navigate]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
-
     try {
-      const res = await API.post("/auth/login", { email, password });
+      const res = await api.post("/auth/login", { email, password });
+
+      // ✅ SAVE TOKEN
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      const role = res.data.user.role;
-      navigate(`/${role}`);
+      // Redirect by role
+      navigate(`/${res.data.user.role}`);
     } catch (err) {
       alert("Invalid credentials");
     }

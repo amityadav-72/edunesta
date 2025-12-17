@@ -1,88 +1,111 @@
-const Submission = require('../models/Submission');
-const Test = require('../models/Test');
-const Question = require('../models/Question');
-const { gradeQuestion } = require('../utils/grader');
+import Submission from "../models/Submission.js";
+import Question from "../models/Question.js";
+import ExcelJS from "exceljs";
 
-const startOrAutosave = async (req, res) => {
-  // Saves partial answers (autosave) and returns the submission id
+/* ================================
+   STUDENT SUBMITS TEST
+   (UNCHANGED – YOUR LOGIC)
+================================ */
+export const submitTest = async (req, res) => {
+  const questions = await Question.find({ test: req.body.testId });
+  let score = 0;
+
+  questions.forEach((q) => {
+    const ans = req.body.answers.find(
+      (a) => String(a.question) === String(q._id)
+    );
+    if (ans && ans.selected === q.correctAnswer) score += q.marks;
+  });
+
+  await Submission.create({
+    student: req.user.id,
+    test: req.body.testId,
+    answers: req.body.answers,
+    score,
+  });
+
+  res.json({ score });
+};
+
+/* ================================
+   TEACHER – VIEW SUBMISSIONS
+   (UNCHANGED)
+================================ */
+export const getSubmissionsForTest = async (req, res) => {
+  const submissions = await Submission.find({ test: req.params.testId })
+    .populate("student", "name email")
+    .populate("test", "title totalMarks");
+
+  res.json(submissions);
+};
+
+/* ================================
+   STUDENT – VIEW OWN RESULTS
+   (UNCHANGED)
+================================ */
+export const getMyResults = async (req, res) => {
+  const results = await Submission.find({ student: req.user.id })
+    .populate("test", "title durationMinutes");
+  res.json(results);
+};
+
+/* ================================
+   TEACHER – EXPORT EXCEL (NEW)
+================================ */
+export const exportSubmissionsExcel = async (req, res) => {
   try {
-    const { testId, answers, autosave } = req.body;
-    if (!testId) return res.status(400).json({ msg: 'Missing testId' });
+    const { testId } = req.params;
 
-    // Find or create in-progress submission for this student/test
-    let submission = await Submission.findOne({ test: testId, student: req.user._id, status: 'in-progress' });
-    if (!submission) {
-      // Determine attemptNumber
-      const attemptsCount = await Submission.countDocuments({ test: testId, student: req.user._id, status: { $in: ['submitted','graded'] }});
-      submission = new Submission({ test: testId, student: req.user._id, attemptNumber: attemptsCount + 1 });
+    const submissions = await Submission.find({ test: testId })
+      .populate("student", "name email")
+      .populate("test", "title totalMarks");
+
+    if (!submissions.length) {
+      return res.status(404).json({ message: "No submissions found" });
     }
 
-    // Update answers but don't grade yet if autosave/in-progress
-    submission.answers = (answers || []).map(a => ({ question: a.question, selected: a.selected }));
-    submission.autosave = !!autosave;
-    await submission.save();
-    res.json({ submissionId: submission._id, status: submission.status });
-  } catch(err){
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Test Submissions");
+
+    worksheet.columns = [
+      { header: "Student Name", key: "name", width: 25 },
+      { header: "Email", key: "email", width: 30 },
+      { header: "Test Name", key: "test", width: 25 },
+      { header: "Score", key: "score", width: 10 },
+      { header: "Total Marks", key: "total", width: 15 },
+      { header: "Percentage", key: "percentage", width: 15 },
+      { header: "Submitted At", key: "submittedAt", width: 25 },
+    ];
+
+    submissions.forEach((s) => {
+      worksheet.addRow({
+        name: s.student?.name,
+        email: s.student?.email,
+        test: s.test?.title,
+        score: s.score,
+        total: s.test?.totalMarks || "-",
+        percentage: s.test?.totalMarks
+          ? ((s.score / s.test.totalMarks) * 100).toFixed(2) + "%"
+          : "-",
+        submittedAt: new Date(s.submittedAt).toLocaleString(),
+      });
+    });
+
+    worksheet.getRow(1).font = { bold: true };
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=test-${testId}-submissions.xlsx`
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Excel export failed" });
   }
 };
-
-const submitTest = async (req, res) => {
-  try {
-    const { submissionId, answers } = req.body;
-    if (!submissionId && !answers) return res.status(400).json({ msg: 'Missing payload' });
-
-    let submission = null;
-    if (submissionId) submission = await Submission.findById(submissionId);
-    if (!submission) {
-      // create fresh one (if no autosave)
-      submission = new Submission({ test: req.body.testId, student: req.user._id });
-    }
-    // attach answers
-    submission.answers = (answers || submission.answers || []).map(a => ({ question: a.question, selected: a.selected }));
-    submission.status = 'submitted';
-    submission.submittedAt = new Date();
-
-    // Grading
-    let total = 0;
-    for (let i = 0; i < submission.answers.length; i++) {
-      const ans = submission.answers[i];
-      const q = await Question.findById(ans.question);
-      const grade = gradeQuestion(q, ans.selected);
-      ans.isCorrect = grade.isCorrect;
-      ans.marksObtained = grade.marksObtained;
-      total += grade.marksObtained;
-    }
-    submission.totalMarks = total;
-    submission.status = 'graded';
-    await submission.save();
-
-    res.json({ submissionId: submission._id, totalMarks: submission.totalMarks });
-  } catch(err){
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
-  }
-};
-
-const getSubmissionsForStudent = async (req, res) => {
-  try {
-    const subs = await Submission.find({ student: req.user._id }).populate('test','title durationMinutes').sort({ submittedAt: -1 });
-    res.json(subs);
-  } catch(err){
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
-  }
-};
-
-const getSubmissionsForTest = async (req, res) => {
-  try {
-    const subs = await Submission.find({ test: req.params.testId }).populate('student','name email').sort({ submittedAt: -1 });
-    res.json(subs);
-  } catch(err){
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
-  }
-};
-
-module.exports = { startOrAutosave, submitTest, getSubmissionsForStudent, getSubmissionsForTest };

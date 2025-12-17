@@ -1,58 +1,39 @@
-const Material = require('../models/Material');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+import Material from "../models/Material.js";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 
-const uploadDir = process.env.UPLOAD_DIR || 'uploads';
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const uploadDir = path.join(__dirname, "..", "uploads", "materials");
+fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, unique + path.extname(file.originalname));
-  }
+  destination: uploadDir,
+  filename: (_, __, cb) => cb(null, Date.now() + ".pdf"),
 });
 
-const fileFilter = function (req, file, cb) {
-  // accept pdf/doc/docx
-  const allowed = ['.pdf', '.doc', '.docx'];
-  if (!allowed.includes(path.extname(file.originalname).toLowerCase())) {
-    return cb(new Error('Only PDF/DOC/DOCX allowed'), false);
-  }
-  cb(null, true);
+export const upload = multer({ storage });
+
+export const uploadMaterialHandler = async (req, res) => {
+  const material = await Material.create({
+    title: req.body.title,
+    description: req.body.description,
+    fileUrl: `/uploads/materials/${req.file.filename}`,
+    uploadedBy: req.user.id,
+    visibleTo: req.body.visibleTo || "students",
+  });
+  res.json(material);
 };
 
-const upload = multer({ storage, fileFilter });
-
-const uploadMaterialHandler = async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ msg: 'No file' });
-    const material = new Material({
-      title: req.body.title || req.file.originalname,
-      description: req.body.description,
-      filename: req.file.originalname,
-      filepath: req.file.filename,
-      uploadedBy: req.user._id
-    });
-    await material.save();
-    res.json(material);
-  } catch(err){
-    console.error(err);
-    res.status(500).json({ msg: err.message || 'Server error' });
-  }
+export const listStudentMaterials = async (req, res) => {
+  const items = await Material.find({ isActive: true });
+  res.json(items);
 };
 
-const listMaterials = async (req, res) => {
-  try {
-    const items = await Material.find().populate('uploadedBy','name email').sort({ uploadedAt: -1 });
-    res.json(items);
-  } catch(err){
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
-  }
+export const listTeacherMaterials = async (req, res) => {
+  const items = await Material.find({ uploadedBy: req.user.id });
+  res.json(items);
 };
-
-module.exports = { upload, uploadMaterialHandler, listMaterials };

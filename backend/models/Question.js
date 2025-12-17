@@ -1,16 +1,31 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
-const OptionSchema = new mongoose.Schema({
-  text: String
-});
+const questionSchema = new mongoose.Schema(
+  {
+    test: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Test",
+      required: true,
+    },
+    text: {
+      type: String,
+      required: true,
+    },
+    options: {
+      type: [String],
+      required: true,
+    },
+    correctAnswer: {
+      type: Number,
+      required: true,
+    },
+    marks: {
+      type: Number,
+      default: 1,
+    },
+    topic: String,
+  },
+  { timestamps: true }
+);
 
-const QuestionSchema = new mongoose.Schema({
-  test: { type: mongoose.Schema.Types.ObjectId, ref: 'Test' },
-  text: { type: String, required: true },
-  options: [{ type: String }], // array of option strings
-  correctAnswers: [{ type: Number }], // indexes of correct options, supports multiple correct
-  marks: { type: Number, default: 1 },
-  createdAt: { type: Date, default: Date.now }
-});
-
-module.exports = mongoose.model('Question', QuestionSchema);
+export default mongoose.model("Question", questionSchema);

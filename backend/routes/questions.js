@@ -1,10 +1,18 @@
-const express = require('express');
+import express from "express";
+import { protect } from "../middleware/auth.js";
+import { permit } from "../middleware/roles.js";
+
+import {
+  addQuestion,
+  getQuestionsByTest,
+} from "../controllers/questionController.js";
+
 const router = express.Router();
-const auth = require('../middleware/auth');
-const { permit } = require('../middleware/roles');
-const { addQuestion, getQuestion } = require('../controllers/questionController');
 
-router.post('/', auth, permit('teacher','admin'), addQuestion);
-router.get('/:id', auth, getQuestion);
+// Teacher adds question
+router.post("/:testId", protect, permit("teacher"), addQuestion);
 
-module.exports = router;
+// Teacher / Student fetch questions
+router.get("/:testId", protect, getQuestionsByTest);
+
+export default router;

@@ -1,9 +1,9 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
 /* ================= REGISTER ================= */
-const register = async (req, res) => {
+export const register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
@@ -28,7 +28,6 @@ const register = async (req, res) => {
 
     await user.save();
 
-    // ✅ INCLUDE ROLE IN JWT
     const token = jwt.sign(
       {
         id: user._id,
@@ -54,7 +53,7 @@ const register = async (req, res) => {
 };
 
 /* ================= LOGIN ================= */
-const login = async (req, res) => {
+export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -72,7 +71,6 @@ const login = async (req, res) => {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
 
-    // ✅ INCLUDE ROLE IN JWT
     const token = jwt.sign(
       {
         id: user._id,
@@ -96,5 +94,3 @@ const login = async (req, res) => {
     res.status(500).json({ msg: "Server error" });
   }
 };
-
-module.exports = { register, login };

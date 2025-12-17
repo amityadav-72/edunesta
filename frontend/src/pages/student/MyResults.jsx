@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import API from "../../services/api";
 import { getUser } from "../../utils/auth";
 
-export default function Results() {
+export default function MyResults() {
   const [results, setResults] = useState([]);
   const [aiSummary, setAiSummary] = useState(null);
   const [loadingAI, setLoadingAI] = useState(false);
@@ -43,13 +43,12 @@ export default function Results() {
     <div>
       <h1 className="text-xl font-bold mb-6">My Results</h1>
 
-      {/* ================= AI ANALYSIS ================= */}
+      {/* ---------------- AI SECTION ---------------- */}
       <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-lg p-5">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg font-semibold">
             AI Weak Topic Analysis
           </h2>
-
           <button
             onClick={analyzeWeakTopics}
             disabled={loadingAI || results.length === 0}
@@ -80,7 +79,7 @@ export default function Results() {
         )}
       </div>
 
-      {/* ================= RESULTS TABLE ================= */}
+      {/* ---------------- RESULTS TABLE ---------------- */}
       <table className="w-full bg-white border text-sm">
         <thead className="bg-gray-100">
           <tr>

@@ -1,12 +1,19 @@
-const express = require('express');
+import express from "express";
+import { protect } from "../middleware/auth.js";
+import { permit } from "../middleware/roles.js";
+
+import {
+  createTest,
+  getTest,
+  publishTest,
+  listTests,
+} from "../controllers/testController.js";
+
 const router = express.Router();
-const auth = require('../middleware/auth');
-const { permit } = require('../middleware/roles');
-const { createTest, getTest, publishTest, listTests } = require('../controllers/testController');
 
-router.post('/', auth, permit('teacher','admin'), createTest);
-router.get('/', auth, listTests);
-router.get('/:id', auth, getTest);
-router.post('/:id/publish', auth, permit('teacher','admin'), publishTest);
+router.post("/", protect, permit("teacher", "admin"), createTest);
+router.get("/", protect, listTests);
+router.post("/:id/publish", protect, permit("teacher", "admin"), publishTest);
+router.get("/:id", protect, getTest); // KEEP LAST
 
-module.exports = router;
+export default router;

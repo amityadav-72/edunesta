@@ -1,12 +1,17 @@
-export default function Materials() {
+export default function StudentMaterials() {
   return (
-    <div className="min-h-screen p-8 bg-gray-100">
-      <h1 className="text-2xl font-bold mb-4">Study Materials</h1>
+    <div>
+      <h1 className="text-xl font-bold mb-6">Study Materials</h1>
 
-      <ul className="bg-white p-4 rounded shadow">
-        <li className="mb-2">📄 Algebra Notes</li>
-        <li className="mb-2">📄 Physics Formulas</li>
-        <li>📄 Chemistry Basics</li>
+      <ul className="bg-white border rounded divide-y">
+        <li className="p-4 flex justify-between">
+          <span>Java Basics Notes</span>
+          <button className="text-blue-600">Download</button>
+        </li>
+        <li className="p-4 flex justify-between">
+          <span>OOP Concepts</span>
+          <button className="text-blue-600">Download</button>
+        </li>
       </ul>
     </div>
   );
